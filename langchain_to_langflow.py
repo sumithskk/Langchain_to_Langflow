@@ -28,19 +28,19 @@ def is_instance_from_langchain(class_obj, module_name):
         return False
 
 
-def get_vertex_arguments(vertex, vertices):
+def get_vertex_arguments(vertex, vertices,all_vertex_info):
     for key, val in vertex.__dict__.items():
         try:
             if val in vertices:
                 val_type = typing.get_type_hints(vertex.__class__)[key]
                 if typing.get_origin(val_type) is typing.Union:
                     val_type = typing.get_args(val_type)[0]
-                all_vertex_info[get_vertex_data(vertex)]["args"].append({key: val_type})
+                all_vertex_info[get_vertex_data(vertex,all_vertex_info)]["args"].append({key: val_type})
         except:
             pass
 
 
-def get_vertex_agent_arg(vertex, vertices, function_list):
+def get_vertex_agent_arg(vertex, vertices, function_list,all_vertex_info):
     all_agents = dir(langchain.agents)
     for function in function_list:
         if function.__name__ in all_agents:
@@ -55,7 +55,7 @@ def get_vertex_agent_arg(vertex, vertices, function_list):
                 for arg_name, arg_type in arguments_type:
                     if arg_type.__name__ in base_class:
                         val_type = typing.get_type_hints(function)[arg_name]
-                        all_vertex_info[get_vertex_data(vertex)]["args"].append(
+                        all_vertex_info[get_vertex_data(vertex,all_vertex_info)]["args"].append(
                             {arg_name: val_type}
                         )
 
@@ -66,7 +66,7 @@ def target_handle_base_type(vertex_name, val):
     ]["type"]
 
 
-def get_target_handle(child, key, val):
+def get_target_handle(child, key, val,all_vertex_info):
     target_handle = ""
     base_class = all_vertex_info[child]["base_class"]
 
@@ -98,14 +98,14 @@ def get_edge(all_vertex_info):
                     "sourceHandle"
                 ] = f"{all_vertex_info[child]['vertex'].__class__.__name__}|{child}|{source_baseclass}"
                 edge["target"] = key
-                edge["targetHandle"] = f"{get_target_handle(child, key, val)}"
+                edge["targetHandle"] = f"{get_target_handle(child, key, val,all_vertex_info)}"
 
                 edges_data.append(edge)
 
     return edges_data
 
 
-def get_vertex_data(vertex):
+def get_vertex_data(vertex,all_vertex_info):
     # print(vertex)
     # print(vertex[1].__class__.__name__)
     for key, val in all_vertex_info.items():
@@ -117,7 +117,7 @@ def get_vertex_data(vertex):
                 return key
 
 
-def get_function_arg_type(function, all_instance) -> list:
+def get_function_arg_type(function, all_instance,all_vertex_info) -> list:
     # edge_update = {}
     edge = []
     function_name = function.__name__
@@ -128,29 +128,29 @@ def get_function_arg_type(function, all_instance) -> list:
         base_class = get_base_classes(i.__class__)
         for arg_name, arg_type in arguments_type:
             if arg_type.__name__ in base_class:
-                edge.append(get_vertex_data(i))
+                edge.append(get_vertex_data(i,all_vertex_info))
     return edge
 
 
-def get_child_vertex(child, vertex, vertices):
+def get_child_vertex(child, vertex, vertices,all_vertex_info):
     for i in child:
         if check_is_child(i[1], vertices):
             if (
-                    get_vertex_data(i[1])
-                    not in all_vertex_info[get_vertex_data(vertex)]["children"]
+                    get_vertex_data(i[1],all_vertex_info)
+                    not in all_vertex_info[get_vertex_data(vertex,all_vertex_info)]["children"]
             ):
-                all_vertex_info[get_vertex_data(vertex)]["children"].append(
-                    get_vertex_data(i[1])
+                all_vertex_info[get_vertex_data(vertex,all_vertex_info)]["children"].append(
+                    get_vertex_data(i[1],all_vertex_info)
                 )
 
-                all_vertex_info[get_vertex_data(vertex)]["args"].append(
+                all_vertex_info[get_vertex_data(vertex,all_vertex_info)]["args"].append(
                     {i[0]: type(i[1])}
                 )
         elif is_instance_from_langchain(i[1], "langchain"):
-            get_child_vertex(i[1], vertex, vertices)
+            get_child_vertex(i[1], vertex, vertices,all_vertex_info)
         elif isinstance(i[1], list) and len(i[1]) > 2:
             for j in i[1]:
-                get_child_vertex(j, vertex, vertices)
+                get_child_vertex(j, vertex, vertices,all_vertex_info)
 
 
 def check_is_child(child, parent):
@@ -165,14 +165,14 @@ def check_is_child(child, parent):
     return False
 
 
-def get_children(vertices, function_list=None):
+def get_children(vertices, function_list=None,all_vertex_info=None):
     for vertex in vertices:
         if vertex.__class__.__name__ == "AgentExecutor":
             all_agents = dir(langchain.agents)
             for j in function_list:
                 if j.__name__ in all_agents:
-                    parent_id = get_vertex_data(vertex)
-                    children = get_function_arg_type(j, vertices)
+                    parent_id = get_vertex_data(vertex,all_vertex_info)
+                    children = get_function_arg_type(j, vertices,all_vertex_info)
                     if isinstance(children, list):
                         all_vertex_info[parent_id]["children"].extend(children)
                     else:
@@ -182,29 +182,29 @@ def get_children(vertices, function_list=None):
                 try:
                     if (
                             child[1] in vertices
-                            and get_vertex_data(child[1])
-                            not in all_vertex_info[get_vertex_data(vertex)]["children"]
+                            and get_vertex_data(child[1],all_vertex_info)
+                            not in all_vertex_info[get_vertex_data(vertex,all_vertex_info)]["children"]
                     ):
-                        parent_id = get_vertex_data(vertex)
-                        all_vertex_info[get_vertex_data(vertex)]["children"].append(
-                            get_vertex_data(child[1])
+                        parent_id = get_vertex_data(vertex,all_vertex_info)
+                        all_vertex_info[get_vertex_data(vertex,all_vertex_info)]["children"].append(
+                            get_vertex_data(child[1],all_vertex_info)
                         )
                     elif (
                             child[1]
                             and not check_is_child(child[1], vertices)
                             and is_instance_from_langchain(child[1], "langchain")
                     ):
-                        get_child_vertex(child[1], vertex, vertices)
+                        get_child_vertex(child[1], vertex, vertices,all_vertex_info)
 
                 except:
                     if (
                             child[1]
                             and check_is_child(child[1], vertices)
                             and child[1]
-                            not in all_vertex_info[get_vertex_data(vertex)]["children"]
+                            not in all_vertex_info[get_vertex_data(vertex,all_vertex_info)]["children"]
                     ):
-                        all_vertex_info[get_vertex_data(vertex)]["children"].append(
-                            get_vertex_data(child[1])
+                        all_vertex_info[get_vertex_data(vertex,all_vertex_info)]["children"].append(
+                            get_vertex_data(child[1],all_vertex_info)
                         )
 
                     elif (
@@ -212,7 +212,7 @@ def get_children(vertices, function_list=None):
                             and not check_is_child(child[1], vertices)
                             and is_instance_from_langchain(child[1], "langchain")
                     ):
-                        get_child_vertex(child[1], vertex, vertices)
+                        get_child_vertex(child[1], vertex, vertices,all_vertex_info)
 
 
 def generate_random_string(length=5):
@@ -233,7 +233,7 @@ def get_base_class():
 
 
 def get_template(
-        component_name: str, vertex_name: str, position, lc_kwargs=None, vertex=None
+        component_name: str, vertex_name: str, position, lc_kwargs=None, vertex=None,all_vertex_info=None
 ) -> dict | None:
     try:
         for key in all_vertex_template[component_name]:
