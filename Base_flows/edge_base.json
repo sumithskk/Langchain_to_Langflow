@@ -1,0 +1,12 @@
+{
+    "source": " ",
+    "sourceHandle": " ",
+    "target": " ",
+    "targetHandle": " ",
+    "style": {
+      "stroke": "inherit"
+    },
+    "className": "stroke-gray-900 dark:stroke-gray-200",
+    "animated": false,
+    "id": "randomid"
+}

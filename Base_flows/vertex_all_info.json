@@ -1,0 +1,25 @@
+{
+        "width": 384,
+        "height": 306,
+        "id": "id",
+        "type": "genericNode",
+        "position": {
+            "x": 500,
+            "y": 500},
+        "data": {
+            "type": "",
+            "node": {
+                "template": {},
+                "description": "Description",
+                "base_classes": []
+            },
+            "id": "id",
+            "value": null
+        },
+        "selected": false,
+        "dragging": false,
+        "positionAbsolute": {
+            "x": 500,
+            "y": 500
+        }
+}
