@@ -21,7 +21,7 @@ from langchain_to_langflow import (
 all_vertex_info = {}
 
 # input file path
-PYTHON_FILE_PATH = "input1.py"
+PYTHON_FILE_PATH = "qwerty1234567890.py"
 
 
 # get classes and instances from the input file
